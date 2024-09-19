@@ -247,7 +247,7 @@ const updateAccountDetails = asyncHandler(async(req, res)=>{
     if(!fullName && !email){
         throw new ApiError(400, "All fields are required")
     }
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -274,12 +274,17 @@ const updatAvatar = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Avatar is missing")
     }
 
+    const user =  await User.findById(req.user?._id)
+    const oldAvatarUrl = user.avatar
+
     const avatar = await uploadOnCloudinary(avatarLocalPath)
     if(!avatar.url){
         throw new ApiError(400, "Error while uploading a avatar")
     }
 
-    const user = User.findByIdAndUpdate(
+    await cloudinary.uploader.destroy(oldAvatarUrl)
+
+    const updatedUser = User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -288,10 +293,13 @@ const updatAvatar = asyncHandler(async(req,res)=>{
         },
         {new:true}
     ).select("-password")
+
+
+
     return res.status(200)
     .json(
         new ApiResponse(
-            200,user, "Avatar updated successfully"
+            200,updatedUser, "Avatar updated successfully"
         )
     )
 })
@@ -303,13 +311,17 @@ const updateUserCoverImage = asyncHandler(async(req, res)=>{
         throw new ApiError(400, "Cover image is missing")
     }
 
+    const user = await User.findById(req.user?._id)
+    const oldCoverImageUrl = user.coverImage
+
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    await cloudinary.uploader.destroy(oldCoverImageUrl)
 
     if(!coverImage.url){
         throw new ApiError(400, "Error while updating a cover image")
     }
 
-   const user = User.findByIdAndUpdate(
+   const updatedUser = User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -320,7 +332,7 @@ const updateUserCoverImage = asyncHandler(async(req, res)=>{
     ).select("-password")
     return res.status(200)
     .json(
-        new ApiResponse(200,user, "cover image updated successfully")
+        new ApiResponse(200,updatedUser, "cover image updated successfully")
     )
 })
 
